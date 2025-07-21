@@ -56,6 +56,8 @@ def inferir_cilindrada(modelo):
             return cilindrada
     return None
 
+
+
 # =================== FETCHER MULTI-XML =======================
 
 def get_xml_urls():
@@ -80,43 +82,19 @@ def fetch_and_convert_xml():
             response = requests.get(JSON_URL)
             response.raise_for_status()
 
-            # Primeiro, vamos verificar o tipo de resposta
-            try:
-                data = response.json()
-            except json.JSONDecodeError as e:
-                print(f"[ERRO] Falha ao decodificar JSON da URL {JSON_URL}: {e}")
-                continue
+            data_dict = response.json()
 
-            # Agora verificamos se é lista ou dicionário
-            if isinstance(data, list):
-                # Se for lista, os veículos estão diretamente na lista
-                veiculos = data
-                print(f"[INFO] Dados recebidos como lista com {len(veiculos)} itens")
-            elif isinstance(data, dict):
-                # Se for dicionário, procuramos a chave 'veiculos'
-                veiculos = data.get("veiculos", [])
-                if not veiculos and len(data) > 0:
-                    # Se não tem 'veiculos' mas tem dados, pode ser que seja um único veículo
-                    if any(key in data for key in ['id', 'modelo', 'marca']):
-                        veiculos = [data]
-                print(f"[INFO] Dados recebidos como dicionário com {len(veiculos)} veículos")
-            else:
-                print(f"[ERRO] Formato de dados não suportado para URL {JSON_URL}")
-                continue
+            # Suporta diferentes formatos (veiculos já em JSON)
+            veiculos = data_dict.get("veiculos", [])
 
             # Garante que seja lista
-            if not isinstance(veiculos, list):
-                veiculos = [veiculos] if veiculos else []
+            if isinstance(veiculos, dict):
+                veiculos = [veiculos]
 
-            print(f"[INFO] Processando {len(veiculos)} veículos da URL")
+            print(f"[INFO] Encontrados {len(veiculos)} veículos")
 
-            for i, v in enumerate(veiculos):
+            for v in veiculos:
                 try:
-                    # Verifica se o item é um dicionário válido
-                    if not isinstance(v, dict):
-                        print(f"[AVISO] Item {i} não é um dicionário válido, pulando...")
-                        continue
-
                     parsed = {
                         "id": v.get("id"),
                         "tipo": v.get("tipo"),
@@ -140,7 +118,7 @@ def fetch_and_convert_xml():
                     parsed_vehicles.append(parsed)
 
                 except Exception as e:
-                    print(f"[ERRO ao converter veículo {i} (ID: {v.get('id', 'N/A') if isinstance(v, dict) else 'N/A'})] {e}")
+                    print(f"[ERRO ao converter veículo ID {v.get('id', 'N/A')}] {e}")
                     continue
 
         data_dict = {
@@ -156,7 +134,7 @@ def fetch_and_convert_xml():
 
     except Exception as e:
         print(f"[ERRO] Falha ao converter JSON: {e}")
-        return {"veiculos": [], "_updated_at": datetime.now().isoformat()}
+        return {}
 
 if __name__ == "__main__":
     result = fetch_and_convert_xml()
